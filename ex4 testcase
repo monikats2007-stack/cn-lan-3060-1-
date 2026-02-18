@@ -1,0 +1,98 @@
+// File: DNSClient1.java
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+
+public class DNSClient1 {
+
+    public static void main(String[] args) {
+        final String SERVER_IP = "127.0.0.1";
+        final int SERVER_PORT = 8053;
+
+        // Test Case Input: Non-existent domain
+        String domain = "unknownsite.com";
+
+        try {
+            DatagramSocket clientSocket = new DatagramSocket();
+            InetAddress serverAddress = InetAddress.getByName(SERVER_IP);
+
+            // Send domain to server
+            byte[] sendBuffer = domain.getBytes();
+            DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, serverAddress, SERVER_PORT);
+            clientSocket.send(sendPacket);
+
+            // Receive response from server
+            byte[] receiveBuffer = new byte[1024];
+            DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+            clientSocket.receive(receivePacket);
+
+            String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
+            System.out.println("Requested Domain: " + domain);
+            System.out.println("Server Response: " + response);
+
+            clientSocket.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+server program  
+
+// File: DNSServer1.java
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.HashMap;
+
+public class DNSServer1 {
+
+    public static void main(String[] args) {
+        // Predefined DNS records
+        HashMap<String, String> dnsRecords = new HashMap<>();
+        dnsRecords.put("example.com", "93.184.216.34");
+        dnsRecords.put("google.com", "142.250.190.78");
+
+        final int SERVER_PORT = 8053;
+
+        try {
+            DatagramSocket serverSocket = new DatagramSocket(SERVER_PORT);
+            System.out.println("DNS Server1 started on port " + SERVER_PORT);
+
+            byte[] receiveBuffer = new byte[1024];
+
+            while (true) {
+                // Receive domain request from client
+                DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+                serverSocket.receive(receivePacket);
+
+                String domain = new String(receivePacket.getData(), 0, receivePacket.getLength()).trim();
+                System.out.println("Received request for: " + domain);
+
+                // Prepare response
+                String response;
+                if (dnsRecords.containsKey(domain)) {
+                    response = dnsRecords.get(domain);
+                } else {
+                    response = "NXDOMAIN";
+                }
+
+                // Send response back to client
+                byte[] sendBuffer = response.getBytes();
+                InetAddress clientAddress = receivePacket.getAddress();
+                int clientPort = receivePacket.getPort();
+
+                DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, clientAddress, clientPort);
+                serverSocket.send(sendPacket);
+                System.out.println("Response sent: " + response);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
